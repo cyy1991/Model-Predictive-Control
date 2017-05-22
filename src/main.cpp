@@ -65,6 +65,22 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
+// Converts coordinates from map's coordinate space to vehicle's coordinate space
+std::tuple<std::vector<double>, std::vector<double>> mapToVehicleCoordinatesTransform(vector<double> x, vector<double> y, double px, double py, double psi)
+{
+  vector <double> new_x, new_y;
+  for (int i = 0; i < x.size(); i++)
+  {
+    double old_x_val = x[i];
+    double old_y_val = y[i];
+    double new_x_val = cos(-psi) * (old_x_val - px) - sin(-psi) * (old_y_val - py);
+    double new_y_val = cos(-psi) * (old_y_val - py) + sin(-psi) * (old_x_val - px);
+    new_x.push_back(new_x_val);
+    new_y.push_back(new_y_val);
+  }
+  return std::make_tuple(new_x, new_y);
+}
+
 int main() {
   uWS::Hub h;
 
@@ -93,13 +109,29 @@ int main() {
           double v = j[1]["speed"];
 
           /*
-          * TODO: Calculate steeering angle and throttle using MPC.
+          * Calculate steeering angle and throttle using MPC.
           *
           * Both are in between [-1, 1].
           *
           */
-          double steer_value;
-          double throttle_value;
+          Eigen::Map<Eigen::VectorXd> e_ptsx(ptsx.data(), ptsx.size());
+          Eigen::Map<Eigen::VectorXd> e_ptsy(ptsy.data(), ptsy.size());
+          auto coeffs = polyfit(e_ptsx, e_ptsy, 3);
+          
+          double cte = polyeval(coeffs, px) - py;
+          double epsi = -atan(coeffs[1] + 2 * coeffs[2] * px + 3 * coeffs[3] * pow(px, 2));
+          
+          Eigen::VectorXd state(6);
+          state << px, py, psi, v, cte, epsi;
+          
+          std::vector<double> vars;
+          std::vector<double> x_vars;
+          std::vector<double> y_vars;
+          
+          std::tie(vars, x_vars, y_vars) = mpc.Solve(state, coeffs);
+          
+          double steer_value = vars[6] / -0.436332;
+          double throttle_value = vars[7];
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
@@ -108,6 +140,8 @@ int main() {
           //Display the MPC predicted trajectory 
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
+          
+          std::tie(mpc_x_vals, mpc_y_vals) = mapToVehicleCoordinatesTransform(x_vars, y_vars, px, py, psi);
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -118,6 +152,8 @@ int main() {
           //Display the waypoints/reference line
           vector<double> next_x_vals;
           vector<double> next_y_vals;
+          
+          std::tie(next_x_vals, next_y_vals) = mapToVehicleCoordinatesTransform(ptsx, ptsy, px, py, psi);
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line

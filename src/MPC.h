@@ -13,8 +13,8 @@ class MPC {
   virtual ~MPC();
 
   // Solve the model given an initial state and polynomial coefficients.
-  // Return the first actuatotions.
-  vector<double> Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs);
+  // Return the first actuatotions, x values and y values
+  std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs);
 };
 
 #endif /* MPC_H */
