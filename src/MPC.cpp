@@ -5,8 +5,8 @@
 
 using CppAD::AD;
 
-size_t N = 25;
-double dt = 0.05;
+size_t N = 7;
+double dt = 0.1;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -23,7 +23,7 @@ const double Lf = 2.67;
 // Set reference values
 double ref_cte = 0;
 double ref_epsi = 0;
-double ref_v = 30;
+double ref_v = 70;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -69,7 +69,7 @@ class FG_eval {
     // Minimize the value gap between sequential actuations.
     for (int i = 0; i < N - 2; i++) {
       fg[0] += 100 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
-      fg[0] += 100 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+      fg[0] += 10 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
     }
     
     //
@@ -108,11 +108,12 @@ class FG_eval {
       AD<double> epsi0 = vars[epsi_start + i];
       
       // Only consider the actuation at time t.
-      AD<double> delta0 = vars[delta_start + i];
-      AD<double> a0 = vars[a_start + i];
+      // Use previous acceleration and steering angle to account for latency
+      AD<double> delta0 = vars[delta_start + (i == 0 ? i : i - 1)];
+      AD<double> a0 = vars[a_start + (i == 0 ? i : i - 1)];
       
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * pow(x0, 2) + coeffs[3] * pow(x0, 3);
-      AD<double> psides0 = CppAD::atan(coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3] * pow(x0, 2));
+      AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * CppAD::pow(x0, 2) + coeffs[3] * CppAD::pow(x0, 3);
+      AD<double> psides0 = CppAD::atan(coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3] * CppAD::pow(x0, 2));
       
       // Equations for the model:
       // x_[t+1] = x[t] + v[t] * cos(psi[t]) * dt
