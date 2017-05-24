@@ -23,7 +23,7 @@ const double Lf = 2.67;
 // Set reference values
 double ref_cte = 0;
 double ref_epsi = 0;
-double ref_v = 70;
+double ref_v = 50;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
