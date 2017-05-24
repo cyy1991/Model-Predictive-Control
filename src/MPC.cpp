@@ -23,7 +23,7 @@ const double Lf = 2.67;
 // Set reference values
 double ref_cte = 0;
 double ref_epsi = 0;
-double ref_v = 10;
+double ref_v = 30;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -57,7 +57,7 @@ class FG_eval {
     for (int i = 0; i < N; i++) {
       fg[0] += CppAD::pow(vars[cte_start + i] - ref_cte, 2);
       fg[0] += CppAD::pow(vars[epsi_start + i] - ref_epsi, 2);
-      fg[0] += 10 * CppAD::pow(vars[v_start + i] - ref_v, 2);
+      fg[0] += CppAD::pow(vars[v_start + i] - ref_v, 2);
     }
     
     // Minimize the use of actuators.
@@ -257,10 +257,10 @@ std::tuple<vector<double>, vector<double>, vector<double>> MPC::Solve(Eigen::Vec
   std::vector<double> x_val;
   // All Y values
   std::vector<double> y_val;
-  for (int i = 0; i < N - 1; i++)
+  for (int i = 0; i < N; i++)
   {
-    x_val.push_back(solution.x[x_start + 1 + i]);
-    y_val.push_back(solution.x[y_start + 1 + i]);
+    x_val.push_back(solution.x[x_start + i]);
+    y_val.push_back(solution.x[y_start + i]);
   }
 
   return {val, x_val, y_val};

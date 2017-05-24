@@ -65,6 +65,13 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
+std::tuple<double, double> mapToVehicleCoordinateTransform(double x, double y, double px, double py, double psi)
+{
+  double new_x_val = cos(-psi) * (x - px) - sin(-psi) * (y - py);
+  double new_y_val = cos(-psi) * (y - py) + sin(-psi) * (x - px);
+  return std::make_tuple(new_x_val, new_y_val);
+}
+
 // Converts coordinates from map's coordinate space to vehicle's coordinate space
 std::tuple<std::vector<double>, std::vector<double>> mapToVehicleCoordinatesTransform(vector<double> x, vector<double> y, double px, double py, double psi)
 {
@@ -73,8 +80,11 @@ std::tuple<std::vector<double>, std::vector<double>> mapToVehicleCoordinatesTran
   {
     double old_x_val = x[i];
     double old_y_val = y[i];
-    double new_x_val = cos(-psi) * (old_x_val - px) - sin(-psi) * (old_y_val - py);
-    double new_y_val = cos(-psi) * (old_y_val - py) + sin(-psi) * (old_x_val - px);
+    
+    double new_x_val, new_y_val;
+    
+    std::tie(new_x_val, new_y_val) = mapToVehicleCoordinateTransform(old_x_val, old_y_val, px, py, psi);
+    
     new_x.push_back(new_x_val);
     new_y.push_back(new_y_val);
   }
@@ -114,15 +124,20 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          Eigen::Map<Eigen::VectorXd> e_ptsx(ptsx.data(), ptsx.size());
-          Eigen::Map<Eigen::VectorXd> e_ptsy(ptsy.data(), ptsy.size());
+          std::vector<double> ptsx_car;
+          std::vector<double> ptsy_car;
+          
+          std::tie(ptsx_car, ptsy_car) = mapToVehicleCoordinatesTransform(ptsx, ptsy, px, py, psi);
+          
+          Eigen::Map<Eigen::VectorXd> e_ptsx(ptsx_car.data(), ptsx_car.size());
+          Eigen::Map<Eigen::VectorXd> e_ptsy(ptsy_car.data(), ptsy_car.size());
           auto coeffs = polyfit(e_ptsx, e_ptsy, 3);
           
-          double cte = polyeval(coeffs, px) - py;
-          double epsi = -atan(coeffs[1] + 2 * coeffs[2] * px + 3 * coeffs[3] * pow(px, 2));
+          double cte = polyeval(coeffs, /*x*/ 0.) - /*y*/ 0.;
+          double epsi = -atan(coeffs[1] + 2 * coeffs[2] * /*x*/ 0. + 3 * coeffs[3] * pow(/*x*/ 0., 2));
           
           Eigen::VectorXd state(6);
-          state << px, py, psi, v, cte, epsi;
+          state << /*y*/ 0., /*x*/ 0., /*psi*/ 0., v, cte, epsi;
           
           std::vector<double> vars;
           std::vector<double> x_vars;
@@ -138,10 +153,8 @@ int main() {
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
-          vector<double> mpc_x_vals;
-          vector<double> mpc_y_vals;
-          
-          std::tie(mpc_x_vals, mpc_y_vals) = mapToVehicleCoordinatesTransform(x_vars, y_vars, px, py, psi);
+          vector<double> mpc_x_vals = x_vars;
+          vector<double> mpc_y_vals = y_vars;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -150,10 +163,8 @@ int main() {
           msgJson["mpc_y"] = mpc_y_vals;
 
           //Display the waypoints/reference line
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
-          
-          std::tie(next_x_vals, next_y_vals) = mapToVehicleCoordinatesTransform(ptsx, ptsy, px, py, psi);
+          vector<double> next_x_vals = ptsx_car;
+          vector<double> next_y_vals = ptsy_car;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
