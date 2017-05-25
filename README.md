@@ -3,10 +3,43 @@ Self-Driving Car Engineer Nanodegree Program
 
 ---
 
+## Implementation description
+
+### The model
+
+Model state consists of position coordinates (x, y), heading (psi), velocity (v), cross  track error (cte) and heading error (epsi). Actuators include steering (delta) and throttle/break (a).
+
+Update equations for the model:
+
+```
+x_[t+1] = x[t] + v[t] * cos(psi[t]) * dt
+y_[t+1] = y[t] + v[t] * sin(psi[t]) * dt
+psi_[t+1] = psi[t] + v[t] / Lf * delta[t] * dt
+v_[t+1] = v[t] + a[t-1] * dt
+cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
+epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t - 1] / Lf * dt
+```
+
+### Timestep Length and Frequency
+
+Timestep length (N) is chosen to be 7, and timestep frequency (dt) 0.1.
+
+Timestep length needs to be small enough to allow for efficient computation, but large enough to make accurate plan further ahead. Values like 4 caused car to be unstable because of too small planing horizon. However values like 15 caused car to be unstable due too low computation frequency.
+
+Timestep frequency needs to be small enough to allow accurate computation but large enough to allow planing further ahead without large computation requirements. Value 0.1 has other nice benefit - it machies 100ms delay that we have for actuators, so it is easy to account for delay.
+
+### Polynomial Fitting and MPC Preprocessing
+
+Waypoints are converted to vehicle coordinate space. I've observed that it helps to reduce computation time, since solution search ends sooner. Vehicle state is converted to vehicle coordinate space as well. Steering value is converted to vehicle format `[-1, 1]` from model's format `[-0.44 rad, 0.44 rad]`. The sign for steering value is flipped to accomodate the simulator.
+
+### Model Predictive Control with Latency
+
+In order to accomodate for latency, in my model update equations I use pre-pevious actuators to affect the current model state rather then previous actuatos that I would use if I would not accomodate for latency.
+
 ## Dependencies
 
 * cmake >= 3.5
- * All OSes: [click here for installation instructions](https://cmake.org/install/)
+  * All OSes: [click here for installation instructions](https://cmake.org/install/)
 * make >= 4.1
   * Linux: make is installed by default on most Linux distros
   * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
